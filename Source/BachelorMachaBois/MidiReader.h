@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
-
 #include "MidiReader.generated.h"
 
 /**
@@ -14,10 +13,11 @@ UENUM(BlueprintType)
 enum class ENoteInputType : uint8
 {
 	None	UMETA(DisplayName = "None"),
-	Left	UMETA(DisplayName = "Left"),
-	Right	UMETA(DisplayName = "Right"),
-	Up		UMETA(DisplayName = "Up"),
-	Down	UMETA(DisplayName = "Down")
+	Five	UMETA(DisplayName = "Five"),
+	Four	UMETA(DisplayName = "Four"),
+	Three	UMETA(DisplayName = "Three"),
+	Two		UMETA(DisplayName = "Two"),
+	One		UMETA(DisplayName = "One")
 };
 
 USTRUCT(BlueprintType)

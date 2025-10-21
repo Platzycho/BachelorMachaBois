@@ -8,11 +8,11 @@
 
 UMidiReader::UMidiReader()
 {
-	NoteToInputMap.Add(48, ENoteInputType::Left); 
-	NoteToInputMap.Add(49, ENoteInputType::Right); 
-	NoteToInputMap.Add(50, ENoteInputType::Up); 
-	NoteToInputMap.Add(51, ENoteInputType::Down); 
-	NoteToInputMap.Add(52, ENoteInputType::Left); 
+	NoteToInputMap.Add(48, ENoteInputType::One); 
+	NoteToInputMap.Add(49, ENoteInputType::Two); 
+	NoteToInputMap.Add(50, ENoteInputType::Three); 
+	NoteToInputMap.Add(51, ENoteInputType::Four); 
+	NoteToInputMap.Add(52, ENoteInputType::Five); 
 }
 
 UMidiReader::~UMidiReader()
@@ -40,12 +40,12 @@ TArray<FMidiNoteEvent> UMidiReader::GetParsedNotes() const
 ENoteInputType UMidiReader::MapMidiNoteToInput(int32 NoteNumber)
 {
 	
-	UE_LOG(LogTemp, Log, TEXT("MapMidiNoteToInput called for note %d"), NoteNumber);
+	/*UE_LOG(LogTemp, Log, TEXT("MapMidiNoteToInput called for note %d"), NoteNumber);
 
 	if (NoteNumber % 4 == 0) return ENoteInputType::Left;
 	if (NoteNumber % 4 == 1) return ENoteInputType::Right;
 	if (NoteNumber % 4 == 2) return ENoteInputType::Up;
-	if (NoteNumber % 4 == 3) return ENoteInputType::Down;
+	if (NoteNumber % 4 == 3) return ENoteInputType::Down;*/
 
 	return ENoteInputType::None;
 	
