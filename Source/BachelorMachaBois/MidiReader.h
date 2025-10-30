@@ -13,11 +13,14 @@ UENUM(BlueprintType)
 enum class ENoteInputType : uint8
 {
 	None	UMETA(DisplayName = "None"),
-	Five	UMETA(DisplayName = "Five"),
-	Four	UMETA(DisplayName = "Four"),
-	Three	UMETA(DisplayName = "Three"),
-	Two		UMETA(DisplayName = "Two"),
-	One		UMETA(DisplayName = "One")
+	Up		UMETA(DisplayName = "Up"),
+	Down	UMETA(DisplayName = "Down"),
+	Left	UMETA(DisplayName = "Left"),
+	Right	UMETA(DisplayName = "Right"),
+	W		UMETA(DisplayName = "W"),
+	A		UMETA(DisplayName = "A"),
+	S		UMETA(DisplayName = "S"),
+	D		UMETA(DisplayName = "D")
 };
 
 USTRUCT(BlueprintType)
@@ -28,11 +31,14 @@ struct FMidiNoteEvent
 	UPROPERTY(BlueprintReadOnly, Category="MIDI")
 	float TimeSeconds = 0.f;
 
+	UPROPERTY(BlueprintReadOnly)
+	float DurationSeconds = 0.f;
+
 	UPROPERTY(BlueprintReadOnly, Category = "MIDI")
 	int32 NoteNumber = 0;
 
 	UPROPERTY(BlueprintReadOnly, Category = "MIDI")
-	ENoteInputType InputType = ENoteInputType::None;
+	ENoteInputType InputType;
 };
 
 
@@ -61,18 +67,7 @@ protected:
 
 
 private:
-	struct MidiEvent
-	{
-		uint8 Status;
-		uint8 Data1;
-		uint8 Data2;
-		uint32 DeltaTime;
-		uint32 AbsoluteTime;
-	};
-
-	TArray<MidiEvent> Events;
 	//uint16 Division = 480
 	
 	bool ParseMidiData(const TArray<uint8>& Data);
-	uint32 ReadVariableLength(const uint8*& Ptr);
 };
