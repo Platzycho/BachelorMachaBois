@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "MidiReader.h"
 #include "NoteWidgetBase.h"
-
 #include "Blueprint/UserWidget.h"
 #include "LaneWidgetBase.generated.h"
 
@@ -18,16 +17,36 @@ class BACHELORMACHABOIS_API ULaneWidgetBase : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	ULaneWidgetBase();
 
-	UPROPERTY(BlueprintReadOnly)
-	ENoteInputType LaneType;
+    ULaneWidgetBase(const FObjectInitializer& ObjectInitializer);
 
-	UPROPERTY()
-	TArray<UNoteWidgetBase*> ActiveNotes;
+    virtual void NativeConstruct() override;
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-	void SpawnNote(const FMidiNoteEvent& Event);
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-	UNoteWidgetBase* GetClosestNoteToHit();
+    /* This lane's input type (Left, Right, Up, etc.) */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rhythm")
+    int32 LaneInputType = 0;
+
+    /* Widget class to spawn for each note (set this to BP_NoteWidget in Blueprint) */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rhythm")
+    TSubclassOf<UNoteWidgetBase> NoteWidgetClass;
+
+    /* Spawn a note on this lane */
+    UFUNCTION(BlueprintCallable)
+    void SpawnNote(const FMidiNoteEvent& Event);
+
+    /* Get the closest note to hit (optional; needed for actual gameplay) */
+    UFUNCTION(BlueprintCallable)
+    UNoteWidgetBase* GetClosestNoteToHit(float CurrentTime, float HitWindow = 0.15f);
+
+protected:
+
+    /* Panel where notes are spawned (CanvasPanel in Blueprint) */
+    UPROPERTY(meta = (BindWidget))
+    class UCanvasPanel* NoteCanvas;
+
+    /* List of all active notes currently scrolling */
+    UPROPERTY()
+    TArray<UNoteWidgetBase*> ActiveNotes;
 	
 };
