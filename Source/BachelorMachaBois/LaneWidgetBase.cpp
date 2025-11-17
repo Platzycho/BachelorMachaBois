@@ -7,89 +7,82 @@
 #include "Blueprint/WidgetTree.h"
 
 ULaneWidgetBase::ULaneWidgetBase(const FObjectInitializer& ObjectInitializer)
-    : Super(ObjectInitializer)
+	: Super(ObjectInitializer)
 {
-    //SetCanTick(true);
+	
 }
 
 void ULaneWidgetBase::NativeConstruct()
 {
-    Super::NativeConstruct();
+	Super::NativeConstruct();
 
-    // NoteCanvas must be bound in BP_LaneWidget
-    if (!NoteCanvas)
-    {
-        UE_LOG(LogTemp, Error, TEXT("LaneWidgetBase: NoteCanvas is not bound!"));
-    }
+	if (!NoteCanvas)
+	{
+		UE_LOG(LogTemp, Error, TEXT("LaneWidgetBase: NoteCanvas is not bound!"));
+	}
 }
 
 void ULaneWidgetBase::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
-    Super::NativeTick(MyGeometry, InDeltaTime);
+	Super::NativeTick(MyGeometry, InDeltaTime);
 
-    const float CurrentTime = GetWorld()->GetTimeSeconds();
+	const float CurrentTime = GetWorld()->GetTimeSeconds();
 
-    // Remove dead notes
-    for (int32 i = ActiveNotes.Num() - 1; i >= 0; --i)
-    {
-        UNoteWidgetBase* Note = ActiveNotes[i];
-        if (!Note) { ActiveNotes.RemoveAt(i); continue; }
+	for (int32 i = ActiveNotes.Num() - 1; i >= 0; --i)
+	{
+		UNoteWidgetBase* Note = ActiveNotes[i];
+		if (!Note) { ActiveNotes.RemoveAt(i); continue; }
 
-        // Simple remove condition: note is far past hit time
-        if (CurrentTime - Note->TimeSeconds > 1.0f)
-        {
-            Note->RemoveFromParent();
-            ActiveNotes.RemoveAt(i);
-        }
-    }
+		if (CurrentTime - Note->TimeSeconds > 1.0f)
+		{
+			Note->RemoveFromParent();
+			ActiveNotes.RemoveAt(i);
+		}
+	}
 }
 
 void ULaneWidgetBase::SpawnNote(const FMidiNoteEvent& Event)
 {
-    if (!NoteWidgetClass || !NoteCanvas)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("LaneWidgetBase::SpawnNote missing NoteWidgetClass or NoteCanvas"));
-        return;
-    }
+	if (!NoteWidgetClass || !NoteCanvas)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("LaneWidgetBase::SpawnNote missing NoteWidgetClass or NoteCanvas"));
+		return;
+	}
 
-    UNoteWidgetBase* Widget = CreateWidget<UNoteWidgetBase>(GetWorld(), NoteWidgetClass);
-    if (!Widget) return;
+	UNoteWidgetBase* Widget = CreateWidget<UNoteWidgetBase>(GetWorld(), NoteWidgetClass);
+	if (!Widget) return;
 
-    // Initialize data
-    Widget->InitializeFromEvent(Event.TimeSeconds, Event.DurationSeconds, Event.NoteNumber, (int32)Event.InputType);
+	Widget->InitializeFromEvent(Event.TimeSeconds, Event.DurationSeconds, Event.NoteNumber, (int32)Event.InputType);
 
-    // Add to UI
-    NoteCanvas->AddChild(Widget);
+	NoteCanvas->AddChild(Widget);
 
-    // Position at default starting point (Y will update every tick in NoteWidgetBase)
-    if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot))
-    {
-        CanvasSlot->SetAutoSize(true);
-        CanvasSlot->SetPosition(FVector2D(0.f, 0.f));
-    }
+	if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot))
+	{
+		CanvasSlot->SetAutoSize(true);
+		CanvasSlot->SetPosition(FVector2D(0.f, 0.f));
+	}
 
-    ActiveNotes.Add(Widget);
+	ActiveNotes.Add(Widget);
 
-    UE_LOG(LogTemp, Log, TEXT("Spawned note %d on lane %d at %.2f"),
-        Event.NoteNumber, LaneInputType, Event.TimeSeconds);
+	UE_LOG(LogTemp, Log, TEXT("Spawned note %d on lane %d at %.2f"), Event.NoteNumber, LaneInputType, Event.TimeSeconds);
 }
 
 UNoteWidgetBase* ULaneWidgetBase::GetClosestNoteToHit(float CurrentTime, float HitWindow)
 {
-    UNoteWidgetBase* BestNote = nullptr;
-    float BestDistance = HitWindow;
+	UNoteWidgetBase* BestNote = nullptr;
+	float BestDistance = HitWindow;
 
-    for (UNoteWidgetBase* Note : ActiveNotes)
-    {
-        if (!Note) continue;
+	for (UNoteWidgetBase* Note : ActiveNotes)
+	{
+		if (!Note) continue;
 
-        float Dist = FMath::Abs(Note->TimeSeconds - CurrentTime);
-        if (Dist < BestDistance)
-        {
-            BestDistance = Dist;
-            BestNote = Note;
-        }
-    }
+		float Dist = FMath::Abs(Note->TimeSeconds - CurrentTime);
+		if (Dist < BestDistance)
+		{
+			BestDistance = Dist;
+			BestNote = Note;
+		}
+	}
 
-    return BestNote;
+	return BestNote;
 }

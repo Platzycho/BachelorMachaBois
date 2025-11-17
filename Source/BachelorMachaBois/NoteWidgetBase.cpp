@@ -5,47 +5,38 @@
 #include "Components/CanvasPanelSlot.h"
 
 UNoteWidgetBase::UNoteWidgetBase(const FObjectInitializer& ObjectInitializer)
-    : Super(ObjectInitializer)
+	: Super(ObjectInitializer)
 {
-    // UUserWidget does NOT tick unless explicitly allowed
-    //SetCanTick(true);
+
 }
 
 void UNoteWidgetBase::NativeConstruct()
 {
-    Super::NativeConstruct();
-
-    SpawnTime = GetWorld()->GetTimeSeconds();
+	Super::NativeConstruct();
 }
 
-// Movement logic executed every frame
 void UNoteWidgetBase::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
-    Super::NativeTick(MyGeometry, InDeltaTime);
+	Super::NativeTick(MyGeometry, InDeltaTime);
 
-    const float CurrentTime = GetWorld()->GetTimeSeconds();
-    const float TimeBeforeHit = TimeSeconds - CurrentTime;
+	const float CurrentTime = GetWorld()->GetTimeSeconds();
+	const float TimeBeforeHit = TimeSeconds - CurrentTime;
 
-    if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(this->Slot))
-    {
-        FVector2D Pos = CanvasSlot->GetPosition();
-        Pos.Y = TimeBeforeHit * ScrollSpeed * -1.f;  // Move downward
-        CanvasSlot->SetPosition(Pos);
-    }
-
-    // Later you’ll add:
-    // - Despawning when below hit line
-    // - Stretching for hold notes
-    // - Hit window checking
+	// Update position inside CanvasPanelSlot if available
+	if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(this->Slot))
+	{
+		FVector2D Pos = CanvasSlot->GetPosition();
+		Pos.Y = TimeBeforeHit * ScrollSpeed * -1.f;  // Move downward
+		CanvasSlot->SetPosition(Pos);
+	}
 }
 
-// Called by lane when note is created
 void UNoteWidgetBase::InitializeFromEvent(float InTimeSeconds, float InDuration, int32 InNoteNumber, int32 InInputType)
 {
-    TimeSeconds = InTimeSeconds;
-    DurationSeconds = InDuration;
-    NoteNumber = InNoteNumber;
-    InputType = InInputType;
+	TimeSeconds = InTimeSeconds;
+	DurationSeconds = InDuration;
+	NoteNumber = InNoteNumber;
+	InputType = InInputType;
 
-    bIsHoldNote = (InDuration > 0.01f);
+	bIsHoldNote = (InDuration > 0.01f);
 }

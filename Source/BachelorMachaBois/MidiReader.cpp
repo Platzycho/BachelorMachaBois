@@ -8,28 +8,25 @@
 
 UMidiReader::UMidiReader()
 {
-	NoteToInputMap.Add(50, ENoteInputType::Up); 
-	NoteToInputMap.Add(52, ENoteInputType::Down); 
-	NoteToInputMap.Add(54, ENoteInputType::Left); 
-	NoteToInputMap.Add(55, ENoteInputType::Right); 
-	NoteToInputMap.Add(60, ENoteInputType::W); 
-	NoteToInputMap.Add(62, ENoteInputType::A); 
-	NoteToInputMap.Add(64, ENoteInputType::S); 
+	// default example mapping (tweak to your liking)
+	NoteToInputMap.Add(50, ENoteInputType::Up);
+	NoteToInputMap.Add(52, ENoteInputType::Down);
+	NoteToInputMap.Add(54, ENoteInputType::Left);
+	NoteToInputMap.Add(55, ENoteInputType::Right);
+	NoteToInputMap.Add(60, ENoteInputType::W);
+	NoteToInputMap.Add(62, ENoteInputType::A);
+	NoteToInputMap.Add(64, ENoteInputType::S);
 	NoteToInputMap.Add(65, ENoteInputType::D);
 
 	UE_LOG(LogTemp, Log, TEXT("---- NoteToInputMap Initialized ----"));
 	for (const auto& Pair : NoteToInputMap)
 	{
-		UE_LOG(LogTemp, Log, TEXT("MIDI %d -> %s"),
-			Pair.Key,
-			*UEnum::GetValueAsString(Pair.Value));
+		UE_LOG(LogTemp, Log, TEXT("MIDI %d -> %s"), Pair.Key, *UEnum::GetValueAsString(Pair.Value));
 	}
 	UE_LOG(LogTemp, Log, TEXT("------------------------------------"));
 }
 
-UMidiReader::~UMidiReader()
-{
-}
+UMidiReader::~UMidiReader() {}
 
 bool UMidiReader::LoadMidiFile(const FString& FilePath)
 {
@@ -44,23 +41,18 @@ bool UMidiReader::LoadMidiFile(const FString& FilePath)
 	return ParseMidiData(Data);
 }
 
-TArray<FMidiNoteEvent> UMidiReader::GetParsedNotes() const
-{
-	return ParsedNotes;
-}
-
 ENoteInputType UMidiReader::MapMidiNoteToInput(int32 NoteNumber)
 {
 	if (NoteToInputMap.Contains(NoteNumber))
 	{
 		return NoteToInputMap[NoteNumber];
 	}
-
 	return ENoteInputType::None;
 }
 
 bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 {
+	// Active notes map: MIDI note -> FMidiNoteEvent (so we can compute durations)
 	TMap<int32, FMidiNoteEvent> ActiveNotes;
 	ParsedNotes.Empty();
 
@@ -72,13 +64,13 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 
 	int32 Index = 0;
 
-	// --- Header ---
+	// Header
 	if (!(Data[0] == 'M' && Data[1] == 'T' && Data[2] == 'h' && Data[3] == 'd'))
 	{
 		UE_LOG(LogTemp, Error, TEXT("Invalid header"));
 		return false;
 	}
-	Index += 8; // Skip "MThd" + chunk length
+	Index += 8;
 
 	uint16 Format = (Data[Index] << 8) | Data[Index + 1];
 	uint16 TrackCount = (Data[Index + 2] << 8) | Data[Index + 3];
@@ -87,12 +79,11 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 
 	UE_LOG(LogTemp, Log, TEXT("MIDI Format %d | Tracks %d | Division %d"), Format, TrackCount, Division);
 
-	// --- Parse each track ---
 	for (int t = 0; t < TrackCount; ++t)
 	{
 		if (Index + 8 >= Data.Num()) break;
 
-		// Find "MTrk"
+		// Track header
 		if (!(Data[Index] == 'M' && Data[Index + 1] == 'T' && Data[Index + 2] == 'r' && Data[Index + 3] == 'k'))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("No 'MTrk' found at track %d"), t);
@@ -105,14 +96,14 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 
 		int32 TrackEnd = Index + TrackLength;
 		double CurrentTicks = 0.0;
-		double Tempo = 500000.0; // default 120 BPM
+		double Tempo = 500000.0; // default 120 BPM (microseconds per quarter)
 		double SecondsPerTick = Tempo / 1000000.0 / Division;
 
 		uint8 RunningStatus = 0;
 
 		while (Index < TrackEnd)
 		{
-			// --- Delta time (VLQ) ---
+			// delta-time (VLQ)
 			uint32 Delta = 0;
 			uint8 Byte = 0;
 			do
@@ -124,21 +115,19 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 			CurrentTicks += Delta;
 			double CurrentTimeSec = CurrentTicks * SecondsPerTick;
 
-			if (Index >= TrackEnd)
-				break;
+			if (Index >= TrackEnd) break;
 
 			uint8 StatusByte = Data[Index++];
 
-			// Handle running status (if byte < 0x80)
+			// running status handling
 			if (StatusByte < 0x80)
 			{
-				// It’s actually data, not status — use previous running status
 				if (RunningStatus == 0)
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Unexpected data byte without running status at %d"), Index);
 					break;
 				}
-				Index--; // step back one, reuse as note
+				Index--;
 				StatusByte = RunningStatus;
 			}
 			else
@@ -148,7 +137,7 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 
 			uint8 EventType = StatusByte & 0xF0;
 
-			// --- Meta Event ---
+			// Meta events
 			if (StatusByte == 0xFF)
 			{
 				if (Index + 1 >= TrackEnd) break;
@@ -162,7 +151,7 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 				Index += MetaLength;
 				continue;
 			}
-			// --- SysEx Event ---
+			// SysEx
 			else if (StatusByte == 0xF0 || StatusByte == 0xF7)
 			{
 				if (Index >= TrackEnd) break;
@@ -171,11 +160,10 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 				continue;
 			}
 
-			// --- Channel Event (Note On / Note Off) ---
+			// Channel events
 			if (EventType == 0x80 || EventType == 0x90)
 			{
-				if (Index + 1 >= TrackEnd)
-					break;
+				if (Index + 1 >= TrackEnd) break;
 
 				uint8 Note = Data[Index++];
 				uint8 Velocity = Data[Index++];
@@ -184,7 +172,6 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 
 				if (bIsNoteOn)
 				{
-					// --- NOTE ON ---
 					FMidiNoteEvent Event;
 					Event.TimeSeconds = CurrentTimeSec;
 					Event.NoteNumber = Note;
@@ -192,13 +179,9 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 
 					if (Event.InputType != ENoteInputType::None)
 					{
-						// Store the full struct so we can fill duration later
+						// store until note off
 						ActiveNotes.Add(Note, Event);
-
-						UE_LOG(LogTemp, Log, TEXT("NOTE ON   %d -> %s at %.3f"),
-							Note,
-							*UEnum::GetValueAsString(Event.InputType),
-							CurrentTimeSec);
+						UE_LOG(LogTemp, Log, TEXT("NOTE ON   %d -> %s at %.3f"), Note, *UEnum::GetValueAsString(Event.InputType), CurrentTimeSec);
 					}
 					else
 					{
@@ -207,7 +190,7 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 				}
 				else
 				{
-					// --- NOTE OFF (or Note On with velocity 0) ---
+					// Note off: finalize if we have an active note
 					if (ActiveNotes.Contains(Note))
 					{
 						FMidiNoteEvent Completed = ActiveNotes[Note];
@@ -228,7 +211,7 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 			}
 			else
 			{
-				// Skip other unhandled events (like pitch bend, CC, etc.)
+				// skip unhandled events
 				int Skip = 0;
 				switch (EventType)
 				{
@@ -250,7 +233,5 @@ bool UMidiReader::ParseMidiData(const TArray<uint8>& Data)
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Parsed %d notes total"), ParsedNotes.Num());
-
 	return true;
 }
-
