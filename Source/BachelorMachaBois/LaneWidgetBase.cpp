@@ -9,7 +9,6 @@
 ULaneWidgetBase::ULaneWidgetBase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	
 }
 
 void ULaneWidgetBase::NativeConstruct()
@@ -18,7 +17,7 @@ void ULaneWidgetBase::NativeConstruct()
 
 	if (!NoteCanvas)
 	{
-		UE_LOG(LogTemp, Error, TEXT("LaneWidgetBase: NoteCanvas is not bound!"));
+		UE_LOG(LogTemp, Error, TEXT("LaneWidget: NoteCanvas NOT bound!"));
 	}
 }
 
@@ -28,6 +27,7 @@ void ULaneWidgetBase::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 
+	// Remove notes after passing judge line
 	for (int32 i = ActiveNotes.Num() - 1; i >= 0; --i)
 	{
 		UNoteWidgetBase* Note = ActiveNotes[i];
@@ -39,13 +39,36 @@ void ULaneWidgetBase::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 			ActiveNotes.RemoveAt(i);
 		}
 	}
+
+	// --- AUTO CORRECT NOTE SIZES WHEN GEOMETRY BECOMES VALID ---
+	if (NoteCanvas)
+	{
+		float Width = NoteCanvas->GetCachedGeometry().GetLocalSize().X;
+
+		if (Width > 5.f)
+		{
+			for (UNoteWidgetBase* Note : ActiveNotes)
+			{
+				if (!Note) continue;
+
+				if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Note->Slot))
+				{
+					if (CanvasSlot->GetSize().X < 5.f)
+					{
+						CanvasSlot->SetSize(FVector2D(Width, 80.f));
+						CanvasSlot->SetZOrder(10);
+					}
+				}
+			}
+		}
+	}
 }
 
 void ULaneWidgetBase::SpawnNote(const FMidiNoteEvent& Event)
 {
 	if (!NoteWidgetClass || !NoteCanvas)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("LaneWidgetBase::SpawnNote missing NoteWidgetClass or NoteCanvas"));
+		UE_LOG(LogTemp, Warning, TEXT("LaneWidget %d: Missing NoteWidgetClass or NoteCanvas"), LaneInputType);
 		return;
 	}
 
@@ -58,18 +81,26 @@ void ULaneWidgetBase::SpawnNote(const FMidiNoteEvent& Event)
 
 	if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot))
 	{
-		CanvasSlot->SetAutoSize(true);
-		CanvasSlot->SetPosition(FVector2D(0.f, 0.f));
+		CanvasSlot->SetAutoSize(false);
+
+		float Width = NoteCanvas->GetCachedGeometry().GetLocalSize().X;
+		if (Width <= 1.f)
+			Width = 120.f; // fallback
+
+		CanvasSlot->SetSize(FVector2D(Width, 80.f));
+		CanvasSlot->SetPosition(FVector2D(0.f, -120.f)); // spawn above lane
+		CanvasSlot->SetZOrder(10);
 	}
 
 	ActiveNotes.Add(Widget);
 
-	UE_LOG(LogTemp, Log, TEXT("Spawned note %d on lane %d at %.2f"), Event.NoteNumber, LaneInputType, Event.TimeSeconds);
+	UE_LOG(LogTemp, Log, TEXT("Spawned note %d on lane %d at %.2f"),
+		Event.NoteNumber, LaneInputType, Event.TimeSeconds);
 }
 
 UNoteWidgetBase* ULaneWidgetBase::GetClosestNoteToHit(float CurrentTime, float HitWindow)
 {
-	UNoteWidgetBase* BestNote = nullptr;
+	UNoteWidgetBase* Best = nullptr;
 	float BestDistance = HitWindow;
 
 	for (UNoteWidgetBase* Note : ActiveNotes)
@@ -80,9 +111,9 @@ UNoteWidgetBase* ULaneWidgetBase::GetClosestNoteToHit(float CurrentTime, float H
 		if (Dist < BestDistance)
 		{
 			BestDistance = Dist;
-			BestNote = Note;
+			Best = Note;
 		}
 	}
 
-	return BestNote;
+	return Best;
 }

@@ -9,7 +9,6 @@
 URythmTrackWidget::URythmTrackWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	// Do NOT call SetCanTick here (we'll drive updates from GameMode)
 }
 
 void URythmTrackWidget::NativeConstruct()
@@ -24,77 +23,99 @@ void URythmTrackWidget::NativeConstruct()
 		return;
 	}
 
-	const int32 ChildCount = LaneContainer->GetChildrenCount();
-	for (int32 i = 0; i < ChildCount; i++)
+	// -----------------------------
+	// RECURSIVE LANE FINDING (Option A)
+	// -----------------------------
+	FindLanesRecursive(LaneContainer);
+
+	UE_LOG(LogTemp, Log, TEXT("TrackWidget: Registered %d lanes."), LaneMap.Num());
+
+	for (const auto& Pair : LaneMap)
 	{
-		UWidget* Child = LaneContainer->GetChildAt(i);
-		if (ULaneWidgetBase* Lane = Cast<ULaneWidgetBase>(Child))
-		{
-			LaneMap.Add(Lane->LaneInputType, Lane);
-			UE_LOG(LogTemp, Log, TEXT("TrackWidget: Registered Lane %d"), Lane->LaneInputType);
-		}
-		else
-		{
-			// not necessarily an error (could be spacer), but warn
-			UE_LOG(LogTemp, Verbose, TEXT("TrackWidget: Non-lane widget found in LaneContainer (index %d)"), i);
-		}
+		UE_LOG(LogTemp, Log, TEXT("   Lane InputType %d mapped to widget %s"),
+			Pair.Key,
+			*Pair.Value->GetName());
 	}
 
-	// StartTime is set by GameMode when it creates and starts the track
 	StartTime = 0.f;
+}
+
+void URythmTrackWidget::FindLanesRecursive(UWidget* Widget)
+{
+	if (!Widget)
+		return;
+
+	// If this widget *is* a lane → register it
+	if (ULaneWidgetBase* Lane = Cast<ULaneWidgetBase>(Widget))
+	{
+		LaneMap.Add(Lane->LaneInputType, Lane);
+		return;
+	}
+
+	// If it's a panel, recurse into children
+	if (UPanelWidget* Panel = Cast<UPanelWidget>(Widget))
+	{
+		const int32 Count = Panel->GetChildrenCount();
+		for (int32 i = 0; i < Count; i++)
+		{
+			UWidget* Child = Panel->GetChildAt(i);
+			FindLanesRecursive(Child);
+		}
+	}
 }
 
 void URythmTrackWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
-	// We do not rely on widget tick; leave empty or call Super
 	Super::NativeTick(MyGeometry, InDeltaTime);
 }
 
-/** Initialize the pending notes (called once from GameMode) */
 void URythmTrackWidget::InitializeTrack(const TArray<FMidiNoteEvent>& Notes)
 {
 	PendingNotes = Notes;
-	PendingNotes.Sort([](const FMidiNoteEvent& A, const FMidiNoteEvent& B) { return A.TimeSeconds < B.TimeSeconds; });
+	PendingNotes.Sort([](const FMidiNoteEvent& A, const FMidiNoteEvent& B)
+		{
+			return A.TimeSeconds < B.TimeSeconds;
+		});
+
 	UE_LOG(LogTemp, Log, TEXT("TrackWidget: Received %d notes"), PendingNotes.Num());
 }
 
-/** GameMode-driven tick entry point — call this every frame from GameMode::Tick() */
 void URythmTrackWidget::TickTrackWidget(float CurrentSongTime, float DeltaTime)
 {
 	if (PendingNotes.Num() == 0) return;
 
 	int32 SpawnCount = 0;
 
-	// Spawn while notes are within spawn lead time
 	while (PendingNotes.Num() > 0)
 	{
 		const FMidiNoteEvent& Event = PendingNotes[0];
 
-		// If event is in the future (beyond lead time) → stop
+		// Too early to spawn → stop
 		if (Event.TimeSeconds > CurrentSongTime + SpawnLeadTime)
 			break;
 
-		// Dispatch note to correct lane
+		// Find lane
 		if (ULaneWidgetBase** LanePtr = LaneMap.Find((int32)Event.InputType))
 		{
-			ULaneWidgetBase* Lane = *LanePtr;
-			if (Lane)
+			if (ULaneWidgetBase* Lane = *LanePtr)
 			{
 				Lane->SpawnNote(Event);
 			}
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("TrackWidget: No lane found for input %d"), (int32)Event.InputType);
+			UE_LOG(LogTemp, Warning, TEXT("TrackWidget: No lane found for input %d"),
+				(int32)Event.InputType);
 		}
 
-		// Remove from pending after spawning
 		PendingNotes.RemoveAt(0);
 		SpawnCount++;
 	}
 
 	if (SpawnCount > 0)
 	{
-		UE_LOG(LogTemp, Log, TEXT("TrackWidget: Spawned %d notes at song time %.3f"), SpawnCount, CurrentSongTime);
+		UE_LOG(LogTemp, Log, TEXT("TrackWidget: Spawned %d notes at time %.3f"),
+			SpawnCount,
+			CurrentSongTime);
 	}
 }

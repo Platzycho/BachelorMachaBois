@@ -10,6 +10,7 @@
 /**
  * 
  */
+
 UCLASS()
 class BACHELORMACHABOIS_API URythmTrackWidget : public UUserWidget
 {
@@ -19,32 +20,32 @@ public:
 	URythmTrackWidget(const FObjectInitializer& ObjectInitializer);
 
 	virtual void NativeConstruct() override;
-	// We keep NativeTick but the game will drive TickTrackWidget from GameMode
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-	/** Called by GameMode after loading MIDI */
 	UFUNCTION(BlueprintCallable)
 	void InitializeTrack(const TArray<FMidiNoteEvent>& Notes);
 
-	/** Called by GameMode each frame to advance UI (GameMode-driven tick) */
 	UFUNCTION(BlueprintCallable)
 	void TickTrackWidget(float CurrentSongTime, float DeltaTime);
 
 protected:
-	/** Assign your HorizontalBox or UniformGridPanel in BP_RhythmTrackWidget */
+	/** Assigned in BP_RhythmTrackWidget */
 	UPROPERTY(meta = (BindWidget))
 	UPanelWidget* LaneContainer;
 
-	/** One lane widget per input */
+	/** Found lanes, indexed by InputType */
 	UPROPERTY()
 	TMap<int32, ULaneWidgetBase*> LaneMap;
 
-	/** Notes waiting to be spawned */
+	/** Notes queued for spawning */
 	TArray<FMidiNoteEvent> PendingNotes;
 
-	/** Start time recorded by GameMode (optional) */
+	/** Track start time */
 	float StartTime = 0.f;
 
-	/** Spawn lead time (seconds before hit to spawn) */
+	/** How far ahead notes spawn */
 	float SpawnLeadTime = 2.0f;
+
+	/** Recursively search for lanes anywhere in the hierarchy */
+	void FindLanesRecursive(UWidget* Widget);
 };

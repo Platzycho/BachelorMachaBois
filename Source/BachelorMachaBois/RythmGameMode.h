@@ -20,27 +20,26 @@ class BACHELORMACHABOIS_API ARythmGameMode : public AGameModeBase
 public:
 	ARythmGameMode();
 
-protected:
 	virtual void BeginPlay() override;
-
-public:
 	virtual void Tick(float DeltaTime) override;
 
-	/** MIDI reader instance */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rhythm")
-	UMidiReader* MidiReader;
+protected:
 
-	/** Widget class to create (set this in the BP subclass of your GameMode) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rhythm")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<URythmTrackWidget> TrackWidgetClass;
 
-	/** Runtime instance of the track widget created at BeginPlay */
 	UPROPERTY()
-	URythmTrackWidget* TrackWidgetInstance = nullptr;
+	URythmTrackWidget* TrackWidgetInstance;
 
-	/** When the track was started (GetWorld()->GetTimeSeconds()) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MIDI")
+	TSubclassOf<UMidiReader> MidiReaderClass;
+
+	float BeginPlayTime = 0.f;
 	float TrackStartTime = 0.f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rhythm")
-	float ElapsedTime = 0.f;
+	bool bTrackStarted = false;
+
+	// How long to wait before spawning notes or starting music
+	UPROPERTY(EditAnywhere, Category = "Timing")
+	float StartDelay = 0.6f; // adjust as needed
 };

@@ -40,7 +40,7 @@ public:
 	bool bIsHoldNote = false;
 
 protected:
-	/** Movement speed (pixels per second – tune later) */
+	/** Movement speed (pixels per second - tune later) */
 	UPROPERTY(EditAnywhere, Category = "Rhythm")
 	float ScrollSpeed = 500.f;
 };

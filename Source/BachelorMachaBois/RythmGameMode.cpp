@@ -15,54 +15,55 @@ void ARythmGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	MidiReader = NewObject<UMidiReader>(this);
+	BeginPlayTime = GetWorld()->GetTimeSeconds();
 
-	if (MidiReader && MidiReader->LoadMidiFile(TEXT("C:/Users/Nesli/Documents/Bachelor/Midi Temp Stor/Dark 2.mid")))
+	if (TrackWidgetClass)
 	{
-		UE_LOG(LogTemp, Log, TEXT("MIDI loaded successfully!"));
-
-		const TArray<FMidiNoteEvent>& Notes = MidiReader->GetParsedNotes();
-		for (const FMidiNoteEvent& Note : Notes)
-		{
-			UE_LOG(LogTemp, Log, TEXT("Note %d | %.3f sec | Dur %.3f | Input: %s"),
-				Note.NoteNumber, Note.TimeSeconds, Note.DurationSeconds, *UEnum::GetValueAsString(Note.InputType));
-		}
-
-		// Create and initialize track UI if we've set a widget class
-		if (TrackWidgetClass)
-		{
-			TrackWidgetInstance = CreateWidget<URythmTrackWidget>(GetWorld(), TrackWidgetClass);
-			if (TrackWidgetInstance)
-			{
-				TrackWidgetInstance->AddToViewport();
-				TrackWidgetInstance->InitializeTrack(Notes);
-
-				// record start time for the song/track (GameMode-driven clock)
-				TrackStartTime = GetWorld()->GetTimeSeconds();
-				UE_LOG(LogTemp, Log, TEXT("Track widget created and initialized at world time %.3f"), TrackStartTime);
-			}
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("TrackWidgetClass not set on GameMode. Set it in the GameMode defaults."));
-		}
+		TrackWidgetInstance = CreateWidget<URythmTrackWidget>(GetWorld(), TrackWidgetClass);
+		TrackWidgetInstance->AddToViewport();
 	}
-	else
+
+	if (MidiReaderClass && TrackWidgetInstance)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to load MIDI file"));
+		UMidiReader* MidiReaderInstance = NewObject<UMidiReader>(this, MidiReaderClass);
+
+		FString Path = TEXT("C:/Users/Nesli/Documents/Bachelor/Midi Temp Stor/Dark 2.mid");
+
+		if (MidiReaderInstance->LoadMidiFile(Path))
+		{
+			TrackWidgetInstance->InitializeTrack(MidiReaderInstance->GetParsedNotes());
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("MidiReader parsed %d notes"),
+			MidiReaderInstance->GetParsedNotes().Num());
 	}
+	UE_LOG(LogTemp, Log, TEXT("GameMode BeginPlay complete - waiting %.2f seconds before starting track"), StartDelay);
 }
 
 void ARythmGameMode::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	ElapsedTime += DeltaTime;
+	if (!TrackWidgetInstance)
+		return;
 
-	// Drive the UI via the track widget (if created)
-	if (TrackWidgetInstance)
+	float Now = GetWorld()->GetTimeSeconds();
+
+	// 1) DELAY UNTIL GAME IS READY
+	if (!bTrackStarted)
 	{
-		const float CurrentSongTime = GetWorld()->GetTimeSeconds() - TrackStartTime;
-		TrackWidgetInstance->TickTrackWidget(CurrentSongTime, DeltaTime);
+		if (Now - BeginPlayTime >= StartDelay)
+		{
+			TrackStartTime = Now;
+			bTrackStarted = true;
+
+			UE_LOG(LogTemp, Log, TEXT("Track STARTED at time %.3f"), TrackStartTime);
+		}
+		return; // Don't tick notes yet
 	}
+
+	// 2) NORMAL TRACK TIME
+	float CurrentSongTime = Now - TrackStartTime;
+
+	TrackWidgetInstance->TickTrackWidget(CurrentSongTime, DeltaTime);
 }

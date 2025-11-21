@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "NoteWidgetBase.h"
@@ -7,7 +7,6 @@
 UNoteWidgetBase::UNoteWidgetBase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-
 }
 
 void UNoteWidgetBase::NativeConstruct()
@@ -22,11 +21,17 @@ void UNoteWidgetBase::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 	const float TimeBeforeHit = TimeSeconds - CurrentTime;
 
-	// Update position inside CanvasPanelSlot if available
+	// Notes scroll downward (top → bottom)
 	if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(this->Slot))
 	{
+		// Where the note should be hit (bottom of lane)
+		const float JudgeLineY = 500.f;  // You can expose this later
+
 		FVector2D Pos = CanvasSlot->GetPosition();
-		Pos.Y = TimeBeforeHit * ScrollSpeed * -1.f;  // Move downward
+
+		// Move note from above toward JudgeLineY
+		Pos.Y = JudgeLineY - (TimeBeforeHit * ScrollSpeed);
+
 		CanvasSlot->SetPosition(Pos);
 	}
 }

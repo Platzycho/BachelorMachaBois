@@ -6,6 +6,7 @@
 #include "MidiReader.h"
 #include "NoteWidgetBase.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/CanvasPanel.h"
 #include "LaneWidgetBase.generated.h"
 
 /**
@@ -22,22 +23,18 @@ public:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rhythm")
-	int32 LaneInputType = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rhythm")
-	TSubclassOf<UNoteWidgetBase> NoteWidgetClass;
-
-	UFUNCTION(BlueprintCallable)
 	void SpawnNote(const FMidiNoteEvent& Event);
 
-	UFUNCTION(BlueprintCallable)
-	UNoteWidgetBase* GetClosestNoteToHit(float CurrentTime, float HitWindow = 0.15f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Notes")
+	TSubclassOf<UNoteWidgetBase> NoteWidgetClass;
 
-protected:
 	UPROPERTY(meta = (BindWidget))
-	class UCanvasPanel* NoteCanvas;
+	UCanvasPanel* NoteCanvas;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lane")
+	int32 LaneInputType = 0;
+
 	TArray<UNoteWidgetBase*> ActiveNotes;
+
+	UNoteWidgetBase* GetClosestNoteToHit(float CurrentTime, float HitWindow);
 };
