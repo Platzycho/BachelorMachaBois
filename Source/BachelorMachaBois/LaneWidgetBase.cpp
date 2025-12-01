@@ -98,6 +98,71 @@ void ULaneWidgetBase::SpawnNote(const FMidiNoteEvent& Event)
 		Event.NoteNumber, LaneInputType, Event.TimeSeconds);
 }
 
+EHitQuality ULaneWidgetBase::TryHit(float CurrentTime, float PerfectWindow, float GreatWindow, float GoodWindow)
+{
+	if (ActiveNotes.Num() == 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Lane %d: TryHit -> no active notes"), LaneInputType);
+		return EHitQuality::Miss;
+	}
+
+	UNoteWidgetBase* BestNote = nullptr;
+	float BestDistance = GoodWindow; // we only care up to GoodWindow
+
+	for (UNoteWidgetBase* Note : ActiveNotes)
+	{
+		if (!Note) continue;
+
+		const float Dist = FMath::Abs(Note->TimeSeconds - CurrentTime);
+		if (Dist < BestDistance)
+		{
+			BestDistance = Dist;
+			BestNote = Note;
+		}
+	}
+
+	if (!BestNote)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Lane %d: TryHit -> no note within window"), LaneInputType);
+		return EHitQuality::Miss;
+	}
+
+	// Decide quality by distance
+	EHitQuality Quality = EHitQuality::Miss;
+	if (BestDistance <= PerfectWindow)
+	{
+		Quality = EHitQuality::Perfect;
+	}
+	else if (BestDistance <= GreatWindow)
+	{
+		Quality = EHitQuality::Great;
+	}
+	else if (BestDistance <= GoodWindow)
+	{
+		Quality = EHitQuality::Good;
+	}
+	else
+	{
+		return EHitQuality::Miss;
+	}
+
+	// Remove the hit note from UI and list
+	if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(BestNote->Slot))
+	{
+		// (optional: snap note to judge line or play animation before removal)
+	}
+
+	BestNote->RemoveFromParent();
+	ActiveNotes.Remove(BestNote);
+
+	UE_LOG(LogTemp, Log, TEXT("Lane %d: HIT %s, dist=%.3f"),
+		LaneInputType,
+		*UEnum::GetValueAsString(Quality),
+		BestDistance);
+
+	return Quality;
+}
+
 UNoteWidgetBase* ULaneWidgetBase::GetClosestNoteToHit(float CurrentTime, float HitWindow)
 {
 	UNoteWidgetBase* Best = nullptr;

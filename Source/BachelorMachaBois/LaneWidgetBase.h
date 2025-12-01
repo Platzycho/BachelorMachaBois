@@ -12,6 +12,15 @@
 /**
  * 
  */
+UENUM(BlueprintType)
+enum class EHitQuality : uint8
+{
+	Miss     UMETA(DisplayName = "Miss"),
+	Good     UMETA(DisplayName = "Good"),
+	Great     UMETA(DisplayName = "Great"),
+	Perfect  UMETA(DisplayName = "Perfect")
+};
+
 UCLASS()
 class BACHELORMACHABOIS_API ULaneWidgetBase : public UUserWidget
 {
@@ -24,6 +33,9 @@ public:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	void SpawnNote(const FMidiNoteEvent& Event);
+
+	UFUNCTION(BlueprintCallable, Category = "Rhythm|Hit")
+	EHitQuality TryHit(float CurrentTime, float PerfectWindow = 0.05f, float GreatWindow = 0.08f, float GoodWindow = 0.12f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Notes")
 	TSubclassOf<UNoteWidgetBase> NoteWidgetClass;

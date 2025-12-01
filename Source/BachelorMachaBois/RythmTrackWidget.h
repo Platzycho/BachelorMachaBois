@@ -28,6 +28,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void TickTrackWidget(float CurrentSongTime, float DeltaTime);
 
+	UFUNCTION(BlueprintCallable, Category = "Rhythm|Hit")
+	EHitQuality HandleLaneInput(int32 LaneInputType, float CurrentSongTime);
+
 protected:
 	/** Assigned in BP_RhythmTrackWidget */
 	UPROPERTY(meta = (BindWidget))
@@ -45,6 +48,15 @@ protected:
 
 	/** How far ahead notes spawn */
 	float SpawnLeadTime = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rhythm|Hit")
+	float PerfectWindow = 0.05f;   // 50 ms
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rhythm|Hit")
+	float GreatWindow = 0.08f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rhythm|Hit")
+	float GoodWindow = 0.12f;
 
 	/** Recursively search for lanes anywhere in the hierarchy */
 	void FindLanesRecursive(UWidget* Widget);

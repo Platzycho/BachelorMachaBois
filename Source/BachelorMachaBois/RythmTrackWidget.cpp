@@ -119,3 +119,18 @@ void URythmTrackWidget::TickTrackWidget(float CurrentSongTime, float DeltaTime)
 			CurrentSongTime);
 	}
 }
+
+EHitQuality URythmTrackWidget::HandleLaneInput(int32 LaneInputType, float CurrentSongTime)
+{
+	if (ULaneWidgetBase** LanePtr = LaneMap.Find(LaneInputType))
+	{
+		ULaneWidgetBase* Lane = *LanePtr;
+		if (Lane)
+		{
+			return Lane->TryHit(CurrentSongTime, PerfectWindow, GoodWindow, GreatWindow);
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("TrackWidget: HandleLaneInput -> No lane for input %d"), LaneInputType);
+	return EHitQuality::Miss;
+}

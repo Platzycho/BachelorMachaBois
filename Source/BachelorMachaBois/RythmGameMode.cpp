@@ -67,3 +67,81 @@ void ARythmGameMode::Tick(float DeltaTime)
 
 	TrackWidgetInstance->TickTrackWidget(CurrentSongTime, DeltaTime);
 }
+
+void ARythmGameMode::HandleLaneInput(int32 LaneInputType)
+{
+	if (!TrackWidgetInstance || !bTrackStarted)
+	{
+		UE_LOG(LogTemp, Log, TEXT("HandleLaneInput: Track not ready yet"));
+		return;
+	}
+
+	const float Now = GetWorld()->GetTimeSeconds();
+	const float CurrentSongTime = Now - TrackStartTime;
+
+	EHitQuality Result = TrackWidgetInstance->HandleLaneInput(LaneInputType, CurrentSongTime);
+
+	UE_LOG(LogTemp, Log, TEXT("Input on lane %d -> %s"),
+		LaneInputType,
+		*UEnum::GetValueAsString(Result));
+}
+
+void ARythmGameMode::ApplyHitResult(EHitQuality Quality)
+{
+	// Every judged note (even Miss) contributes to "max possible"
+	const int32 NoteMaxValue = PerfectScoreValue;
+	TotalPossibleScore += NoteMaxValue;
+
+	int32 DeltaScore = 0;
+
+	switch (Quality)
+	{
+	case EHitQuality::Perfect:
+		NumPerfect++;
+		DeltaScore = PerfectScoreValue;
+		Combo++;
+		break;
+
+	case EHitQuality::Great:
+		NumGreat++;
+		DeltaScore = GreatScoreValue;
+		Combo++;
+		break;
+
+	case EHitQuality::Good:
+		NumGood++;
+		DeltaScore = GoodScoreValue;
+		Combo++;
+		break;
+
+	case EHitQuality::Miss:
+	default:
+		NumMiss++;
+		DeltaScore = 0;
+		Combo = 0; // break combo on miss
+		break;
+	}
+
+	Score += DeltaScore;
+	TotalAchievedScore += DeltaScore;
+
+	if (Combo > MaxCombo)
+	{
+		MaxCombo = Combo;
+	}
+
+	if (TotalPossibleScore > 0)
+	{
+		AccuracyPercent =
+			static_cast<float>(TotalAchievedScore) /
+			static_cast<float>(TotalPossibleScore) * 100.f;
+	}
+	else
+	{
+		AccuracyPercent = 0.f;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Score=%d Combo=%d MaxCombo=%d Acc=%.2f%% (P:%d G:%d Gd:%d M:%d)"),
+		Score, Combo, MaxCombo, AccuracyPercent,
+		NumPerfect, NumGreat, NumGood, NumMiss);
+}

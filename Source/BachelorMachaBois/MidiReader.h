@@ -13,14 +13,14 @@ UENUM(BlueprintType)
 enum class ENoteInputType : uint8
 {
 	None UMETA(DisplayName = "None"),
-	Up UMETA(DisplayName = "Up"),
-	Down UMETA(DisplayName = "Down"),
-	Left UMETA(DisplayName = "Left"),
-	Right UMETA(DisplayName = "Right"),
 	W UMETA(DisplayName = "W"),
 	A UMETA(DisplayName = "A"),
 	S UMETA(DisplayName = "S"),
-	D UMETA(DisplayName = "D")
+	D UMETA(DisplayName = "D"),
+	Up UMETA(DisplayName = "Up"),
+	Down UMETA(DisplayName = "Down"),
+	Left UMETA(DisplayName = "Left"),
+	Right UMETA(DisplayName = "Right")
 };
 
 USTRUCT(BlueprintType)
